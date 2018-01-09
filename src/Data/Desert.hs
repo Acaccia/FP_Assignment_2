@@ -1,10 +1,12 @@
 {-# LANGUAGE MultiWayIf #-}
 module Data.Desert (Tile(..), Desert, makeDesert, observe, (!), set, Index, openChest) where
 
-import Control.Monad.State
-import Data.Internal.List2D
-import System.Random
-import Text.Printf          (printf)
+import           Control.Monad.State
+import qualified Data.HashSet            as S
+import           Data.Internal.Direction
+import           Data.Internal.List2D
+import           System.Random
+import           Text.Printf             (printf)
 
 data Tile = Sand Bool | Water | Lava | Portal deriving (Eq)
 
@@ -18,14 +20,18 @@ toChar Lava     = '~'
 toChar Portal   = '!'
 
 openChest :: (Nat, Nat) -> Desert -> Desert
-openChest = set (Sand False)
+openChest p (Desert l o) = Desert (set (Sand False) p l) o
 
-type Desert = List2D Tile
+data Desert = Desert {
+    list2D     :: List2D Tile
+  , observable :: S.HashSet (Nat, Nat)
+  }
 
-makeDesert :: Double -> Double -> Double -> Double -> Double -> StdGen -> Desert
-makeDesert t w p l ll g = List2D (headLine : tailLines) where
-
+makeDesert :: Double -> Double -> Double -> Double -> Double -> Int -> StdGen -> Desert
+makeDesert t w p l ll sight g = Desert (List2D (headLine : tailLines)) observable
+ where
     (s:seeds) = mkStdGen <$> randoms g
+    observable = let s = toEnum sight in S.fromList [(i, j) | i <- [0..s], j <- [0..s-i]]
 
     randomTile :: State (StdGen, Tile, [Tile]) Tile
     randomTile = do
@@ -49,30 +55,33 @@ makeDesert t w p l ll g = List2D (headLine : tailLines) where
     tailLines :: [[Tile]]
     tailLines = evalState lineOfTiles <$> zip3 seeds (repeat $ Sand False) (headLine : tailLines)
 
-observe :: (Nat, Nat) -> Int -> Desert -> String
-observe (x, y) sight (List2D grid) = unlines $ putPlayer formatted
-  where x' = fromEnum x
-        y' = fromEnum y
-        goodLines = dropAndTake (x'-sight) (2*sight + 1) grid
-        goodCols = zipWith takeAround ([0..sight] ++ [sight-1, sight-2..]) goodLines
-        formatted = zipWith format ([sight+1, sight+2..sight*2] ++ [sight*2+1, sight*2..]) goodCols
+{-# ANN observe "HLint: ignore Use infix" #-}
 
-        dropAndTake :: Int -> Int -> [[a]] -> [[a]]
-        dropAndTake d t xs = if d < 0
-          then replicate (abs d) [] ++ take (t+d) xs
-          else take t (drop d xs)
+observe :: (Nat, Nat) -> Direction -> Int -> Desert -> Desert
+observe (i, j) d sight (Desert l h) = Desert l $ case d of
+    U -> union observeNW observeNE
+    D -> union observeSW observeSE
+    L -> union observeNW observeSW
+    R -> union observeNE observeSE
+  where
+    i' = fromEnum i
+    j' = fromEnum j
+    toNat x = toEnum x :: Nat
+    upI = [i'-sight, i'-sight+1..i']    -- [1, 2, 3, 4, 5, 6]
+    downI = [i'+sight, i'+sight-1..i']  -- [11, 10, 9, 8, 7, 6]
+    leftJ = [j', j'-1..]
+    rightJ = [j'..]
+    filterNat xs = [(toNat x, toNat y) | (x, y) <- xs, x >= 0 && y >= 0]
+    obs m n = filterNat $ zip m n
+    observeNW = obs upI leftJ
+    observeSW = obs downI leftJ
+    observeNE = obs upI rightJ
+    observeSE = obs downI rightJ
+    union a b = foldr S.insert h (a ++ b)
 
-        takeAround :: Int -> [a] -> [a]
-        takeAround n = drop (y'-n) . take (y'+n+1)
-
-        format :: Int -> [Tile] -> String
-        format n = printf ("% " ++ show n ++ "s") . fmap toChar
-
-        putPlayer :: [String] -> [String]
-        putPlayer grid =
-          let (xs, y:ys) = splitAt sight grid
-              (xxs, _:yys) = splitAt sight y
-          in xs ++ [xxs ++ "P" ++ yys] ++ ys
+observeSW (i, j) sight h = let s = toEnum sight in foldl (flip S.insert) h (zip [i-s, i-s+1..i] [j..j+s])
+observeNE (i, j) sight h = let s = toEnum sight in foldl (flip S.insert) h (zip [i, i-1..i-s] [j, j-1..j-s])
+observeSE (i, j) sight h = let s = toEnum sight in foldl (flip S.insert) h (zip [i..i+s] [j..j+s])
 
 testDesert :: Desert
-testDesert = makeDesert 0.3 0.1 0.05 0.1 0.5 (mkStdGen 42)
+testDesert = makeDesert 0.3 0.1 0.05 0.1 0.5 10 (mkStdGen 42)

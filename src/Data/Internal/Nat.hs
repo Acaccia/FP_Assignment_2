@@ -1,6 +1,10 @@
+{-# LANGUAGE DeriveGeneric #-}
 module Data.Internal.Nat (Nat()) where
 
-newtype Nat = Nat Int deriving (Eq, Ord)
+import Data.Hashable
+import GHC.Generics  (Generic)
+
+newtype Nat = Nat Int deriving (Eq, Generic, Ord)
 
 instance Num Nat where
   fromInteger = Nat . fromInteger
@@ -24,3 +28,5 @@ instance Enum Nat where
 instance Bounded Nat where
   minBound = 0
   maxBound = Nat maxBound
+
+instance Hashable Nat

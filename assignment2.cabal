@@ -32,6 +32,7 @@ executable assignment2
                      , random
                      , containers
                      , unordered-containers
+                     , hashable
                      , lens
                      , parallel
                      , parsec

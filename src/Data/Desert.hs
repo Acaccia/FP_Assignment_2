@@ -1,5 +1,5 @@
 {-# LANGUAGE MultiWayIf #-}
-module Data.Desert (Tile(..), Desert, makeDesert, observe, (!), set, Index, openChest) where
+module Data.Desert (Tile(..), Desert(..), makeDesert, observe, (!), set, Index, openChest, surroundings) where
 
 import           Control.Monad.State
 import qualified Data.HashSet            as S
@@ -56,7 +56,6 @@ makeDesert t w p l ll sight g = Desert (List2D (headLine : tailLines)) observabl
     tailLines = evalState lineOfTiles <$> zip3 seeds (repeat $ Sand False) (headLine : tailLines)
 
 {-# ANN observe "HLint: ignore Use infix" #-}
-
 observe :: (Nat, Nat) -> Direction -> Int -> Desert -> Desert
 observe (i, j) d sight (Desert l h) = Desert l $ case d of
     U -> union observeNW observeNE
@@ -79,9 +78,18 @@ observe (i, j) d sight (Desert l h) = Desert l $ case d of
     observeSE = obs downI rightJ
     union a b = foldr S.insert h (a ++ b)
 
-observeSW (i, j) sight h = let s = toEnum sight in foldl (flip S.insert) h (zip [i-s, i-s+1..i] [j..j+s])
-observeNE (i, j) sight h = let s = toEnum sight in foldl (flip S.insert) h (zip [i, i-1..i-s] [j, j-1..j-s])
-observeSE (i, j) sight h = let s = toEnum sight in foldl (flip S.insert) h (zip [i..i+s] [j..j+s])
+surroundings :: (Nat, Nat) -> Int -> Int -> Desert -> String
+surroundings (i, j) wid hei (Desert d h) = unlines is
+  where
+    i' = fromEnum i
+    j' = fromEnum j
+    charify (x, y) = if | x < 0 || y < 0 -> '#'
+                        | (x', y') `S.member` h -> toChar (d ! (x', y'))
+                        | otherwise -> '?'
+      where x' = toEnum x
+            y' = toEnum y
+    is = [[charify (x, y) | y <- [j'-wid..j'+wid]] | x <- [i'-hei..i'+hei]]
+
 
 testDesert :: Desert
 testDesert = makeDesert 0.3 0.1 0.05 0.1 0.5 10 (mkStdGen 42)

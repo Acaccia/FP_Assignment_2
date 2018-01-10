@@ -1,5 +1,5 @@
 {-# LANGUAGE MultiWayIf #-}
-module Data.Desert (Tile(..), Desert(..), makeDesert, observe, (!), set, Index, openChest, surroundings) where
+module Data.Desert (Tile(..), Desert(..), makeDesert, getTile, observe, (!), set, Index, openChest, surroundings) where
 
 import           Control.Monad.State
 import qualified Data.HashSet            as S
@@ -90,6 +90,8 @@ surroundings (i, j) wid hei (Desert d h) = unlines is
             y' = toEnum y
     is = [[charify (x, y) | y <- [j'-wid..j'+wid]] | x <- [i'-hei..i'+hei]]
 
+getTile :: Desert -> (Nat, Nat) -> Tile
+getTile (Desert l _) = (l !)
 
 testDesert :: Desert
 testDesert = makeDesert 0.3 0.1 0.05 0.1 0.5 10 (mkStdGen 42)

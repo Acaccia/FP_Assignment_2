@@ -2,6 +2,7 @@
 {-# LANGUAGE Strict     #-}
 module Data.Worm where
 
+import Control.Concurrent.Async
 import Control.Concurrent.STM
 import Data.Desert
 import Data.Internal.Direction
@@ -33,8 +34,8 @@ keepGrowing maxSize (Worm cs d g) = Worm cs d (g && length cs < maxSize)
 corpsePositionsSTM :: TWorms -> STM [(Nat, Nat)]
 corpsePositionsSTM = fmap concat . traverse (fmap corpse . readTVar)
 
-wormActionSTM :: TWorm -> TWorms -> Desert -> STM ()
-wormActionSTM tw tws d =
+wormActionSTM :: Desert -> TWorms -> TWorm -> STM ()
+wormActionSTM d tws tw =
   readTVar tw >>= \case
     w@(Worm _ _ False)       -> writeTVar tw (dug w)
     w@(Worm cor@(c:_) dir _) -> do
@@ -44,3 +45,9 @@ wormActionSTM tw tws d =
       writeTVar tw $ if tile /= Sand False && newPos `notElem` occupied
         then Worm (newPos : cor) dir True
         else dug w
+
+wormAction :: Desert -> TWorms -> TWorm -> IO ()
+wormAction d tws tw = atomically (wormActionSTM d tws tw)
+
+wormsAreCrazy :: Desert -> TWorms -> IO ()
+wormsAreCrazy d = forConcurrently_ <*> wormAction d

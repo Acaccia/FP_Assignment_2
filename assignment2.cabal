@@ -27,6 +27,7 @@ executable assignment2
                      , Data.Internal.List2D
                      , Data.Internal.Nat
                      , Data.Player
+                     , Data.Worm
   build-depends:       base >= 4.7 && < 5
                      , mtl
                      , random
@@ -37,3 +38,4 @@ executable assignment2
                      , parallel
                      , parsec
                      , stm
+                     , async

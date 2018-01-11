@@ -1,10 +1,11 @@
 {-# LANGUAGE MultiWayIf #-}
-module Data.Desert (Tile(..), Desert(..), makeDesert, getTile, observe, (!), set, Index, openChest, surroundings) where
+module Data.Desert (Tile(..), Desert(..), makeDesert, getTile, observe, (!), set, Index, openChest, collectedTreasures, surroundings) where
 
 import           Control.Monad.State
 import qualified Data.HashSet            as S
 import           Data.Internal.Direction
 import           Data.Internal.List2D
+import           Data.List               (intercalate)
 import           System.Random
 import           Text.Printf             (printf)
 
@@ -20,15 +21,16 @@ toChar Lava     = '~'
 toChar Portal   = '!'
 
 openChest :: (Nat, Nat) -> Desert -> Desert
-openChest p (Desert l o) = Desert (set (Sand False) p l) o
+openChest p (Desert l o c) = Desert (set (Sand False) p l) o (S.insert p c)
 
 data Desert = Desert {
-    list2D     :: List2D Tile
-  , observable :: S.HashSet (Nat, Nat)
+    list2D    :: List2D Tile
+  , revealed  :: S.HashSet (Nat, Nat)
+  , collected :: S.HashSet (Nat, Nat)
   }
 
 makeDesert :: Double -> Double -> Double -> Double -> Double -> Int -> StdGen -> Desert
-makeDesert t w p l ll sight g = Desert (List2D (headLine : tailLines)) observable
+makeDesert t w p l ll sight g = Desert (List2D (headLine : tailLines)) observable S.empty
  where
     (s:seeds) = mkStdGen <$> randoms g
     observable = let s = toEnum sight in S.fromList [(i, j) | i <- [0..s], j <- [0..s-i]]
@@ -57,11 +59,11 @@ makeDesert t w p l ll sight g = Desert (List2D (headLine : tailLines)) observabl
 
 {-# ANN observe "HLint: ignore Use infix" #-}
 observe :: (Nat, Nat) -> Direction -> Int -> Desert -> Desert
-observe (i, j) d sight (Desert l h) = Desert l $ case d of
+observe (i, j) d sight (Desert l h c) = Desert l (case d of
     U -> union observeNW observeNE
     D -> union observeSW observeSE
     L -> union observeNW observeSW
-    R -> union observeNE observeSE
+    R -> union observeNE observeSE) c
   where
     i' = fromEnum i
     j' = fromEnum j
@@ -79,7 +81,7 @@ observe (i, j) d sight (Desert l h) = Desert l $ case d of
     union a b = foldr S.insert h (a ++ b)
 
 surroundings :: (Nat, Nat) -> Int -> Int -> Desert -> String
-surroundings (i, j) wid hei (Desert d h) = unlines is
+surroundings (i, j) wid hei (Desert d h c) = unlines is
   where
     i' = fromEnum i
     j' = fromEnum j
@@ -91,7 +93,16 @@ surroundings (i, j) wid hei (Desert d h) = unlines is
     is = [[charify (x, y) | y <- [j'-wid..j'+wid]] | x <- [i'-hei..i'+hei]]
 
 getTile :: Desert -> (Nat, Nat) -> Tile
-getTile (Desert l _) = (l !)
+getTile (Desert l _ c) = (l !)
+
+collectedTreasures :: Desert -> Int
+collectedTreasures = S.size . collected
+
+saveDesert :: Desert -> String
+saveDesert (Desert _ rs cs) = rev ++ "\n" ++ col
+  where format ty (x, y) = printf "%s ([%d,%d])" ty (fromEnum x) (fromEnum y)
+        rev = intercalate "\n" $ format "revealed" <$> S.toList rs
+        col = intercalate "\n" $ format "collected" <$> S.toList cs
 
 testDesert :: Desert
 testDesert = makeDesert 0.3 0.1 0.05 0.1 0.5 10 (mkStdGen 42)

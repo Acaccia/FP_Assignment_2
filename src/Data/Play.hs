@@ -37,7 +37,7 @@ instance Show Situation where
 
 initPlay :: Conf.Config -> Play
 initPlay (Conf.Config sight mw seed t w p l ll x y) =
-   Play (Player (0, 0) 0 mw) (makeDesert t w p l ll sight (mkStdGen seed))
+   Play (Player (0, 0) mw) (makeDesert t w p l ll sight (mkStdGen seed))
 
 inGameConfig :: Conf.Config -> InGameConfig
 inGameConfig = IGConfig <$> Conf.maxWater <*> Conf.sight
@@ -54,13 +54,12 @@ reactToTile = do
   pos <- uses player pos
   (! pos) <$> uses desert list2D >>= \case
     Sand True -> do desert %= openChest pos
-                    player %= addChest
                     checkWater
     Water     -> do w <- view maxWater
                     player %= refillWater w
                     pure Ongoing
     Lava      -> pure Lost
-    Portal    -> Win <$> uses player chest
+    Portal    -> Win <$> uses desert collectedTreasures
     _         -> checkWater
 
 checkWater :: MonadState Play m => m Situation
@@ -69,7 +68,7 @@ checkWater = chk <$> uses player water
         chk _ = Ongoing
 
 getClosest :: (Nat, Nat) -> Desert -> (Maybe Nat, Maybe Nat, Maybe Nat)
-getClosest pos (Desert d _) = runEval $ (,,)
+getClosest pos (Desert d _ c) = runEval $ (,,)
   <$> rpar (bfsDistance Water [Lava, Portal] pos d)
   <*> rpar (bfsDistance (Sand True) [Lava, Portal] pos d)
   <*> rpar (bfsDistance Portal [Lava] pos d)
@@ -77,11 +76,11 @@ getClosest pos (Desert d _) = runEval $ (,,)
 printGame :: (MonadIO m, MonadReader InGameConfig m, MonadState Play m) => m ()
 printGame = do
     s <- view sight
-    Player pos c w <- use player
+    Player pos w <- use player
     d <- use desert
     let (closestW, closestT, closestP) = getClosest pos d
     liftIO (putStr $ surroundings pos 25 40 d)
-    liftIO (putStrLn $ "Collected treasures: " ++ show c)
+    liftIO (putStrLn $ "Collected treasures: " ++ show (collectedTreasures d))
     liftIO (putStrLn $ "Remaining water: " ++ show w)
     liftIO (putStrLn $ "Closest water: " ++ show closestW)
     liftIO (putStrLn $ "Closest treasure: " ++ show closestT)

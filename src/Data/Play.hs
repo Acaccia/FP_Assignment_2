@@ -15,6 +15,7 @@ import           Data.Functor
 import           Data.Internal.List2D.BFS.Strict
 import           Data.Internal.Nat
 import           Data.Player
+import           System.Random                   (mkStdGen)
 
 data Play = Play { _player :: Player
                  , _desert :: Desert
@@ -35,8 +36,8 @@ instance Show Situation where
   show Ongoing = ""
 
 initPlay :: Conf.Config -> Play
-initPlay (Conf.Config sight mw seed t w p l ll) =
-   Play (Player (0, 0) 0 mw) (makeDesert t w p l ll sight seed)
+initPlay (Conf.Config sight mw seed t w p l ll x y) =
+   Play (Player (0, 0) 0 mw) (makeDesert t w p l ll sight (mkStdGen seed))
 
 inGameConfig :: Conf.Config -> InGameConfig
 inGameConfig = IGConfig <$> Conf.maxWater <*> Conf.sight

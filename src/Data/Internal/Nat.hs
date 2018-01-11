@@ -14,6 +14,13 @@ instance Num Nat where
   abs n = n
   signum (Nat n) = Nat (signum n)
 
+instance Real Nat where
+  toRational (Nat n) = toRational n
+
+instance Integral Nat where
+  quotRem (Nat n) (Nat m) = let (q, r) = n `quotRem` m in (Nat q, Nat r)
+  toInteger (Nat n) = toInteger n
+
 instance Show Nat where show (Nat n) = show n
 instance Read Nat where
   readsPrec n = fmap (first fromInteger) . readsPrec n

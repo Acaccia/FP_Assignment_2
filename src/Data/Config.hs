@@ -2,17 +2,21 @@
 module Data.Config (Config(..), askConfigUntilUserBecomesClever) where
 
 import Control.Monad.Except
+import Data.List
 import System.Random        (StdGen, mkStdGen)
+import Text.Printf
 
 data Config = Config {
     sight      :: Int
   , maxWater   :: Int
-  , seed       :: StdGen
+  , seed       :: Int
   , treasureLL :: Double
   , waterLL    :: Double
   , portalLL   :: Double
   , lava1LL    :: Double
   , lava2LL    :: Double
+  , wormSize   :: Int
+  , wormLL     :: Double
   } deriving (Show)
 
 data ConfigError = OutOfBounds String String String
@@ -54,15 +58,33 @@ askConfig :: ECIO Config
 askConfig = do
   sight <- ask "sight"
   maxWater <- ask "max water"
-  seed <- mkStdGen <$> ask "seed"
+  seed <- ask "seed"
   treasureLL <- toPercent <$> askAndCheck "treasure likelihood" 0 100
   waterLL <- toPercent <$> askAndCheck "water likelihood" 0 100
   portalLL <- toPercent <$> askAndCheck "portal likelihood" 0 100
   lava1LL <- toPercent <$> askAndCheck "lava likelihood" 0 100 >>= checkPercentage waterLL portalLL
   lava2LL <- toPercent <$> askAndCheck "lava (adjacent) likelihood" 0 100 >>= checkPercentage waterLL portalLL
-  pure $ Config sight maxWater seed treasureLL waterLL portalLL lava1LL lava2LL
+  wormSize <- ask "worms maximal size"
+  wormLL <- toPercent <$> askAndCheck "worms appearance likelihood" 0 100
+  pure $ Config sight maxWater seed treasureLL waterLL portalLL lava1LL lava2LL wormSize wormLL
 
 askConfigUntilUserBecomesClever :: IO Config
 askConfigUntilUserBecomesClever = runExceptT askConfig >>= \case
   Left err     -> print err *> askConfigUntilUserBecomesClever
   Right config -> pure config
+
+saveConfig :: Config -> String
+saveConfig c = intercalate "\n" [
+    format "s" $ attr sight
+  , format "m" $ attr maxWater
+  , format "g" $ attr seed
+  , format "t" $ attrN treasureLL
+  , format "w" $ attrN waterLL
+  , format "p" $ attrN portalLL
+  , format "l" $ attrN lava1LL
+  , format "ll" $ attrN lava2LL
+  , format "x" $ attr wormSize
+  ]
+  where attr att = att c
+        attrN att = round (100 * att c)
+        format = printf "%s (%d)"

@@ -4,6 +4,7 @@ module Data.Worm where
 
 import Control.Concurrent.Async
 import Control.Concurrent.STM
+import Control.Monad
 import Data.Desert
 import Data.Internal.Direction
 import Data.Internal.Nat
@@ -49,5 +50,11 @@ wormActionSTM d tws tw =
 wormAction :: Desert -> TWorms -> TWorm -> IO ()
 wormAction d tws tw = atomically (wormActionSTM d tws tw)
 
-wormsAreCrazy :: Desert -> TWorms -> IO ()
-wormsAreCrazy d = forConcurrently_ <*> wormAction d
+wormsTurn :: Desert -> TWorms -> IO ()
+wormsTurn d = forConcurrently_ <*> wormAction d
+
+livingSTM :: TWorm -> STM Bool
+livingSTM = fmap living . readTVar
+
+removeOldWormsSTM :: TWorms -> STM TWorms
+removeOldWormsSTM = filterM livingSTM

@@ -8,7 +8,9 @@ import Control.Monad
 import Data.Desert
 import Data.Internal.Direction
 import Data.Internal.Nat
+import Data.List                (intercalate)
 import System.Random
+import Text.Printf
 
 data Worm = Worm {
     corpse    :: [(Nat, Nat)]
@@ -58,3 +60,10 @@ livingSTM = fmap living . readTVar
 
 removeOldWormsSTM :: TWorms -> STM TWorms
 removeOldWormsSTM = filterM livingSTM
+
+saveWormsSTM :: TWorms -> STM String
+saveWormsSTM = fmap (intercalate "\n") . traverse saveWorm
+  where positions = intercalate "," . map (\(x, y) -> printf "[%d,%d]" (fromEnum x) (fromEnum y))
+        toString (Worm cs _ True)  = printf "emerging (%s)" (positions cs)
+        toString (Worm cs _ False) = printf "disappearing (%s)" (positions cs)
+        saveWorm = fmap toString . readTVar

@@ -1,4 +1,4 @@
-module Data.Player (Player(..), D.Direction(..), move, refillWater) where
+module Data.Player (Player(..), D.Direction(..), move, refillWater, savePlayer) where
 
 import qualified Data.Internal.Direction as D
 import           Data.Internal.Nat

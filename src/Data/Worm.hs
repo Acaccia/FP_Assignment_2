@@ -63,7 +63,7 @@ removeOldWormsSTM = filterM livingSTM
 
 saveWormsSTM :: TWorms -> STM String
 saveWormsSTM = fmap (intercalate "\n") . traverse saveWorm
-  where positions = intercalate "," . map (\(x, y) -> printf "[%d,%d]" (fromEnum x) (fromEnum y))
+  where positions = intercalate "," . fmap (\(x, y) -> printf "[%d,%d]" (fromEnum x) (fromEnum y))
         toString (Worm cs _ True)  = printf "emerging (%s)" (positions cs)
         toString (Worm cs _ False) = printf "disappearing (%s)" (positions cs)
         saveWorm = fmap toString . readTVar

@@ -1,5 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
-module Data.Config (Config(..), askConfigUntilUserBecomesClever) where
+module Data.Config (Config(..), askConfigUntilUserBecomesClever, saveConfig) where
 
 import Control.Monad.Except
 import Data.List

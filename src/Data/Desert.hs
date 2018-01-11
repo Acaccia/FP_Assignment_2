@@ -1,5 +1,5 @@
 {-# LANGUAGE MultiWayIf #-}
-module Data.Desert (Tile(..), Desert(..), makeDesert, getTile, observe, (!), set, Index, openChest, collectedTreasures, surroundings) where
+module Data.Desert (Tile(..), Desert(..), makeDesert, getTile, observe, (!), set, Index, openChest, collectedTreasures, surroundings, saveDesert) where
 
 import           Control.Monad.State
 import qualified Data.HashSet            as S

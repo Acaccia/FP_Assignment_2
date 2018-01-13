@@ -1,12 +1,14 @@
+{-# LANGUAGE LambdaCase      #-}
 {-# LANGUAGE TemplateHaskell #-}
 module Data.Persistency where
 
 import Control.Concurrent.STM
 import Control.Lens
 import Data.Config
-import Data.Desert            (Desert, saveDesert)
+import Data.Desert            hiding (collected, revealed)
+import Data.HashSet           (fromList)
 import Data.Internal.Nat
-import Data.Player            (Player, savePlayer)
+import Data.Player            (Player (..), savePlayer)
 import Data.Worm
 import System.Random
 import Text.Parsec
@@ -22,20 +24,20 @@ type Position = (Nat, Nat)
 
 data GameParse = GameParse {
     _position     :: Maybe Position
-  , _supply       :: Maybe Nat
+  , _supply       :: Maybe Int
   , _revealed     :: [Position]
   , _collected    :: [Position]
   , _emerging     :: [[Position]]
   , _disappearing :: [[Position]]
-  , _s            :: Maybe Nat
-  , _m            :: Maybe Nat
-  , _g            :: Maybe Nat
+  , _s            :: Maybe Int
+  , _m            :: Maybe Int
+  , _g            :: Maybe Int
   , _t            :: Maybe Nat
   , _w            :: Maybe Nat
   , _p            :: Maybe Nat
   , _l            :: Maybe Nat
   , _ll           :: Maybe Nat
-  , _x            :: Maybe Nat
+  , _x            :: Maybe Int
   , _y            :: Maybe Nat
   } deriving Show
 
@@ -91,3 +93,29 @@ parseY = parseGenericAssign "y" parseNat y
 parseGameParse :: Parser GameParse
 parseGameParse = many (allparsers *> newline) *> getState
   where allparsers = parsePos <|> try parseSup <|> try parseRev <|> try parseCol <|> try parseEmer <|> try parseDis <|> try parseS <|> try parseM <|> try parseG <|> try parseT <|> try parseW <|> try parseP <|> try parseL <|> try parseLL <|> try parseX <|> parseY
+
+loadGame :: FilePath -> IO (Maybe (Config, Desert, Player, TWorms))
+loadGame path = runParser parseGameParse initGameParse "Load Game" <$> readFile path >>= \case
+  Left _ -> putStrLn "Corrupted save" >> pure Nothing
+  Right gp -> undefined
+
+configLoad :: GameParse -> Maybe Config
+configLoad gp = Config <$> view s gp <*> view m gp <*> view g gp
+            <*> viewD t gp <*> viewD w gp <*> viewD p gp
+            <*> viewD l gp <*> viewD ll gp <*> view x gp
+            <*> viewD y gp
+  where viewD l = fmap ((/ 100) . fromIntegral) . view l
+
+desertLoad :: GameParse -> Maybe Desert
+desertLoad gp = do
+    (t', w', p', l', ll', g') <- (,,,,,) <$> viewD t gp
+        <*> viewD w gp <*> viewD p gp <*> viewD l gp
+        <*> viewD ll gp <*> view g gp
+    let l = list2D $ makeDesert t' w' p' l' ll' 0 (mkStdGen g')
+    let c = fromList $ view collected gp
+    let r = fromList $ view revealed gp
+    pure (Desert l c r)
+  where viewD l = fmap ((/ 100) . fromIntegral) . view l
+
+playerLoad :: GameParse -> Maybe Player
+playerLoad gp = Player <$> view position gp <*> view supply gp

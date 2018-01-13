@@ -39,3 +39,4 @@ executable assignment2
                      , parsec
                      , stm
                      , async
+                     , gloss

@@ -9,7 +9,7 @@ import Data.Desert            hiding (collected, revealed)
 import Data.HashSet           (fromList)
 import Data.Internal.Nat
 import Data.Player            (Player (..), savePlayer)
-import Data.Worm
+import Data.Worm              hiding (g)
 import System.Random
 import Text.Parsec
 
@@ -97,7 +97,11 @@ parseGameParse = many (allparsers *> newline) *> getState
 loadGame :: FilePath -> IO (Maybe (Config, Desert, Player, TWorms))
 loadGame path = runParser parseGameParse initGameParse "Load Game" <$> readFile path >>= \case
   Left _ -> putStrLn "Corrupted save" >> pure Nothing
-  Right gp -> undefined
+  Right gp -> case (configLoad gp, desertLoad gp, playerLoad gp) of
+    (Just c, Just d, Just p) -> do
+      w <- wormLoad gp
+      pure $ Just (c, d, p, w)
+    _ -> putStrLn "Corrupted save" >> pure Nothing
 
 configLoad :: GameParse -> Maybe Config
 configLoad gp = Config <$> view s gp <*> view m gp <*> view g gp
@@ -119,3 +123,10 @@ desertLoad gp = do
 
 playerLoad :: GameParse -> Maybe Player
 playerLoad gp = Player <$> view position gp <*> view supply gp
+
+wormLoad :: GameParse -> IO TWorms
+wormLoad gp = do
+  g <- newStdGen >>= newTMVarIO
+  em <- traverse (newTVarIO . flip Worm True) (view emerging gp)
+  di <- traverse (newTVarIO . flip Worm False) (view disappearing gp)
+  pure $ TWorms (em ++ di) g

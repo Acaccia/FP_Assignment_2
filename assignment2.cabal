@@ -40,3 +40,4 @@ executable assignment2
                      , stm
                      , async
                      , gloss
+                     , array

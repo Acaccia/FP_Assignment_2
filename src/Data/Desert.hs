@@ -1,13 +1,16 @@
 {-# LANGUAGE MultiWayIf #-}
-module Data.Desert (Tile(..), Desert(..), makeDesert, getTile, observe, (!), set, Index, openChest, collectedTreasures, surroundings, saveDesert) where
+module Data.Desert (Tile(..), Desert(..), makeDesert, getTile, observe, (!), set, Index, openChest, collectedTreasures, surroundings, surroundingsArray, saveDesert) where
 
 import           Control.Monad.State
-import qualified Data.HashSet            as S
+import qualified Data.Array                  as A
+import qualified Data.HashSet                as S
 import           Data.Internal.Direction
 import           Data.Internal.List2D
-import           Data.List               (intercalate)
+import           Data.List                   (intercalate)
+import           Graphics.Gloss.Data.Color
+import           Graphics.Gloss.Data.Picture
 import           System.Random
-import           Text.Printf             (printf)
+import           Text.Printf                 (printf)
 
 data Tile = Sand Bool | Water | Lava | Portal deriving (Eq)
 
@@ -92,8 +95,17 @@ surroundings (i, j) wid hei (Desert d h c) = unlines is
             y' = toEnum y
     is = [[charify (x, y) | y <- [j'-wid..j'+wid]] | x <- [i'-hei..i'+hei]]
 
+surroundingsArray :: (Nat, Nat) -> Int -> Int -> Desert -> [Maybe Tile]
+surroundingsArray (i, j) wid hei (Desert d h _) = tiles
+  where fromX = max 0 (fromEnum i - hei)
+        toX = fromX + 2 * hei
+        fromY = max 0 (fromEnum j - wid)
+        toY = fromY + 2 * wid
+        tilify (x, y) = if (x, y) `S.member` h then Just (d ! (x, y)) else Nothing
+        tiles = [tilify (x, y) | x <- toEnum <$> [fromX..toX], y <- toEnum <$> [fromY..toY]]
+
 getTile :: Desert -> (Nat, Nat) -> Tile
-getTile (Desert l _ c) = (l !)
+getTile (Desert l _ _) = (l !)
 
 collectedTreasures :: Desert -> Int
 collectedTreasures = S.size . collected

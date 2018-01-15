@@ -28,6 +28,8 @@ executable assignment2
                      , Data.Internal.Nat
                      , Data.Player
                      , Data.Worm
+                     , Data.Persistency
+                     , Graphics.GameGUI
   build-depends:       base >= 4.7 && < 5
                      , mtl
                      , random

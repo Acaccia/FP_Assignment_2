@@ -1,6 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE Strict     #-}
-module Data.Worm where
+module Data.Worm (Worm(..), TWorms(..), addWorm, corpsePositionsSTM, initTWorms, wormsMove, saveWormsSTM) where
 
 import Control.Concurrent.Async
 import Control.Concurrent.STM
@@ -25,6 +25,9 @@ data TWorms = TWorms {
 
 initWorm :: (Nat, Nat) -> Worm
 initWorm p = Worm [p] True
+
+initTWorms :: IO TWorms
+initTWorms = TWorms [] <$> (newStdGen >>= newTMVarIO)
 
 dug :: Worm -> Worm
 dug (Worm cs _) = Worm (init cs) False
@@ -71,6 +74,18 @@ livingSTM = fmap living . readTVar
 
 removeOldWormsSTM :: TWorms -> STM TWorms
 removeOldWormsSTM (TWorms w g) = flip TWorms g <$> filterM livingSTM w
+
+wormsMove :: Desert -> TWorms -> IO TWorms
+wormsMove d tw = wormsTurn d tw >> atomically (removeOldWormsSTM tw)
+
+addWorm :: Double -> (Nat, Nat) -> TWorms -> IO TWorms
+addWorm p pos tws = do
+  gen <- atomically $ takeTMVar (g tws)
+  let (r, gen') = random gen
+  atomically $ putTMVar (g tws) gen'
+  (if r < p then put (newTVarIO (initWorm pos)) else pure) tws
+  where put w t = (\w' -> t {worms = w' : worms t}) <$> w
+
 
 saveWormsSTM :: TWorms -> STM String
 saveWormsSTM = fmap (intercalate "\n") . traverse saveWorm . worms

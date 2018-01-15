@@ -1,5 +1,6 @@
 module Main where
 
+import Graphics.GameGUI
+
 main :: IO ()
-main =
-  putStrLn "hello world"
+main = game

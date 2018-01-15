@@ -1,6 +1,6 @@
 {-# LANGUAGE LambdaCase      #-}
 {-# LANGUAGE TemplateHaskell #-}
-module Data.Persistency where
+module Data.Persistency (saveGame, loadGame) where
 
 import Control.Concurrent.STM
 import Control.Lens
@@ -98,9 +98,8 @@ loadGame :: FilePath -> IO (Maybe (Config, Desert, Player, TWorms))
 loadGame path = runParser parseGameParse initGameParse "Load Game" <$> readFile path >>= \case
   Left _ -> putStrLn "Corrupted save" >> pure Nothing
   Right gp -> case (configLoad gp, desertLoad gp, playerLoad gp) of
-    (Just c, Just d, Just p) -> do
-      w <- wormLoad gp
-      pure $ Just (c, d, p, w)
+    (Just c, Just d, Just p) ->
+      (\w -> Just (c, d, p, w)) <$> wormLoad gp
     _ -> putStrLn "Corrupted save" >> pure Nothing
 
 configLoad :: GameParse -> Maybe Config

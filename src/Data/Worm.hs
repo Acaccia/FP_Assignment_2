@@ -88,7 +88,7 @@ addWorm p pos tws = do
 
 
 saveWormsSTM :: TWorms -> STM String
-saveWormsSTM = fmap (intercalate "\n") . traverse saveWorm . worms
+saveWormsSTM = fmap unlines . traverse saveWorm . worms
   where positions = intercalate "," . fmap (\(x, y) -> printf "[%d,%d]" (fromEnum x) (fromEnum y))
         toString (Worm cs True)  = printf "emerging (%s)" (positions cs)
         toString (Worm cs False) = printf "disappearing (%s)" (positions cs)

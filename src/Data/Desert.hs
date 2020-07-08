@@ -6,7 +6,6 @@ import qualified Data.Array                  as A
 import qualified Data.HashSet                as S
 import           Data.Internal.Direction
 import           Data.Internal.List2D
-import           Data.List                   (intercalate)
 import           Graphics.Gloss.Data.Color
 import           Graphics.Gloss.Data.Picture
 import           System.Random
@@ -111,10 +110,10 @@ collectedTreasures :: Desert -> Int
 collectedTreasures = S.size . collected
 
 saveDesert :: Desert -> String
-saveDesert (Desert _ rs cs) = rev ++ "\n" ++ col
+saveDesert (Desert _ rs cs) = unlines $ rev ++ col
   where format ty (x, y) = printf "%s ([%d,%d])" ty (fromEnum x) (fromEnum y)
-        rev = intercalate "\n" $ format "revealed" <$> S.toList rs
-        col = intercalate "\n" $ format "collected" <$> S.toList cs
+        rev = format "revealed" <$> S.toList rs
+        col = format "collected" <$> S.toList cs
 
 testDesert :: Desert
 testDesert = makeDesert 0.3 0.1 0.05 0.1 0.5 10 (mkStdGen 42)

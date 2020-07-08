@@ -16,9 +16,9 @@ import Text.Parsec
 saveGame :: FilePath -> Config -> Desert -> Player -> TWorms -> IO ()
 saveGame path c d p tws = do
   writeFile path (savePlayer p)
-  appendFile path ('\n' : saveDesert d)
-  atomically (saveWormsSTM tws) >>= appendFile path . ('\n' :)
-  appendFile path ('\n' : saveConfig c)
+  appendFile path (saveDesert d)
+  atomically (saveWormsSTM tws) >>= appendFile path
+  appendFile path (saveConfig c)
 
 type Position = (Nat, Nat)
 
@@ -91,16 +91,16 @@ parseX = parseGenericAssign "x" parseNat x
 parseY = parseGenericAssign "y" parseNat y
 
 parseGameParse :: Parser GameParse
-parseGameParse = many (allparsers *> newline) *> getState
-  where allparsers = parsePos <|> try parseSup <|> try parseRev <|> try parseCol <|> try parseEmer <|> try parseDis <|> try parseS <|> try parseM <|> try parseG <|> try parseT <|> try parseW <|> try parseP <|> try parseL <|> try parseLL <|> try parseX <|> parseY
+parseGameParse = many (allparsers *> newline) *> eof *> getState
+  where allparsers = try parsePos <|> try parseSup <|> try parseRev <|> try parseCol <|> try parseEmer <|> try parseDis <|> try parseS <|> try parseM <|> try parseG <|> try parseT <|> try parseW <|> try parseP <|> try parseL <|> try parseLL <|> try parseX <|> parseY
 
 loadGame :: FilePath -> IO (Maybe (Config, Desert, Player, TWorms))
 loadGame path = runParser parseGameParse initGameParse "Load Game" <$> readFile path >>= \case
-  Left _ -> putStrLn "Corrupted save" >> pure Nothing
+  Left err -> putStrLn "Corrupted save" >> pure Nothing
   Right gp -> case (configLoad gp, desertLoad gp, playerLoad gp) of
     (Just c, Just d, Just p) ->
       (\w -> Just (c, d, p, w)) <$> wormLoad gp
-    _ -> putStrLn "Corrupted save" >> pure Nothing
+    _err -> putStrLn "Corrupted save" >> pure Nothing
 
 configLoad :: GameParse -> Maybe Config
 configLoad gp = Config <$> view s gp <*> view m gp <*> view g gp
@@ -117,7 +117,7 @@ desertLoad gp = do
     let l = list2D $ makeDesert t' w' p' l' ll' 0 (mkStdGen g')
     let c = fromList $ view collected gp
     let r = fromList $ view revealed gp
-    pure (Desert l c r)
+    pure (Desert l r c)
   where viewD l = fmap ((/ 100) . fromIntegral) . view l
 
 playerLoad :: GameParse -> Maybe Player

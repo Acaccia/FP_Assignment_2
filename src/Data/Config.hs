@@ -74,7 +74,7 @@ askConfigUntilUserBecomesClever = runExceptT askConfig >>= \case
   Right config -> pure config
 
 saveConfig :: Config -> String
-saveConfig c = intercalate "\n" [
+saveConfig c = unlines [
     format "s" $ attr sight
   , format "m" $ attr maxWater
   , format "g" $ attr seed
@@ -84,6 +84,7 @@ saveConfig c = intercalate "\n" [
   , format "l" $ attrN lava1LL
   , format "ll" $ attrN lava2LL
   , format "x" $ attr wormSize
+  , format "y" $ attrN wormLL
   ]
   where attr att = att c
         attrN att = round (100 * att c)

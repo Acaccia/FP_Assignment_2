@@ -8,6 +8,7 @@ import           Control.Lens
 import           Control.Monad
 import           Data.Config
 import           Data.Desert                      hiding (set)
+import           Data.Functor
 import qualified Data.HashSet                     as S
 import           Data.Internal.List2D.BFS.Strict
 import           Data.Internal.Nat
@@ -47,11 +48,11 @@ game = do
 askNewOrLoad :: IO GameState
 askNewOrLoad = do
   putStr "(1) New Game or (2) Load Game ?"
-  getChar >>= \case
-      '1' -> do c <- askConfigUntilUserBecomesClever
+  getLine >>= \case
+      "1" -> do c <- askConfigUntilUserBecomesClever
                 f <- putStr "Path for save: " *> getLine
                 newGameState c f
-      '2' -> do l <- putStr "Path to load: " *> getLine
+      "2" -> do l <- putStr "Path to load: " *> getLine
                 s <- putStr "Path to save: " *> getLine
                 loadGameState l s
       _   -> askNewOrLoad
@@ -133,19 +134,19 @@ moveState dir gs = do
 
 handleEvents :: Event -> GameState -> IO GameState
 handleEvents (EventKey (Char 'k') Down _ _) =
-  (saveGame <$> view saveFile <*> view config <*> view desert
-  <*> view player <*> view worms) *> pure
+  \gs -> saveGame (view saveFile gs) (view config gs) (view desert gs)
+  (view player gs) (view worms gs) $> gs
 handleEvents (EventKey (Char 'w') Down _ _) = moveState U
 handleEvents (EventKey (Char 'a') Down _ _) = moveState L
 handleEvents (EventKey (Char 's') Down _ _) = moveState D
 handleEvents (EventKey (Char 'd') Down _ _) = moveState R
+handleEvents _ = pure
 
 newWorms :: GameState -> IO GameState
 newWorms gs = do
   wmsP <- views worms (atomically . corpsePositionsSTM) gs
   let prob = views config wormLL gs
-  let ind = S.filter (\p -> views desert ((! p) . list2D) gs == Sand False) . S.filter (`notElem` wmsP) $ views desert revealed gs
-  undefined
+  let ind = S.delete (views player pos gs) . S.filter (\p -> views desert ((! p) . list2D) gs == Sand False) . S.filter (`notElem` wmsP) $ views desert revealed gs
   foldM (reduce prob) gs ind
   where reduce prob g i = flip (set worms) g <$> addWorm prob i (view worms g)
 

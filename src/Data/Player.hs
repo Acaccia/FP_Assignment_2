@@ -17,4 +17,4 @@ refillWater :: Int -> Player -> Player
 refillWater n p = p {water = n}
 
 savePlayer :: Player -> String
-savePlayer (Player (x, y) w) = printf "position ([%d,%d])\nsupply (%d)" (fromEnum x) (fromEnum y) w
+savePlayer (Player (x, y) w) = printf "position ([%d,%d])\nsupply (%d)\n" (fromEnum x) (fromEnum y) w
